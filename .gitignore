@@ -35,3 +35,9 @@ Desktop.ini
 /launcher/.build/
 /launcher/dist/
 *.class
+
+# Generated MineCanon build output (see launcher/Build-MineCanon.ps1)
+/launcher/build*/
+/launcher/bin/
+/launcher/probe.tmp
+/MineCanon.lnk

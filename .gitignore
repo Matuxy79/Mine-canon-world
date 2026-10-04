@@ -32,6 +32,7 @@ Desktop.ini
 # Local desktop launcher preferences and diagnostics
 /launcher/launcher.properties
 /launcher/forge-installer.log
+/*.jar.log
 /launcher/.build/
 /launcher/dist/
 *.class

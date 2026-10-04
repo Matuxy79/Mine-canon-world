@@ -29,6 +29,64 @@ The target game version is Minecraft 1.20.1. Files in the local mod folder are
 not a verified compatible modpack; check each mod's game version, loader, and
 dependencies before use.
 
+## MineCanon desktop launcher
+
+**MineCanon** is the John Matukutire desktop GUI for Mine Canon World. Its
+orange-accented interface uses the supplied canon landscape artwork, with Home,
+Worlds, Mods, and Settings pages. The original design references remain in
+`minecanon launcher`; the GUI loads `launcher\assets\canon-landscape.png`.
+
+For a native Windows app, double-click `launcher\Install-MineCanon.cmd` once.
+It compiles the app, bundles a minimal Java runtime, creates
+`launcher\dist\MineCanon\MineCanon.exe`, and installs a **MineCanon** shortcut on
+your Windows desktop. Building requires a **JDK 17+ with jpackage**; the bundled
+app needs no separately installed Java and opens without a console window.
+No administrator access, downloads, or system-wide file associations are needed.
+Close MineCanon before rerunning the installer to update its app code.
+
+Keep the packaged app inside this repository: artwork, saves, mods, and
+preferences are resolved relative to it, even when started from another working
+directory. If you move the repository, rerun the installer to recreate the
+desktop shortcut. Generated build/runtime folders are ignored by Git. To remove
+the desktop integration, delete the MineCanon shortcut and `launcher\dist\MineCanon`;
+your worlds and mods are unaffected.
+
+`launcher\MineCanon.cmd` opens the packaged app when available and otherwise
+falls back to source mode.
+
+Double-click `launcher\Launch-Mine-Canon-World.cmd` on Windows to open the custom
+Mine Canon World hub. It requires **a Java JDK 17 or newer** on `PATH` or through
+`JAVA_HOME`, and runs directly from source without downloading dependencies or
+requiring a build. Use the script rather than opening a JAR through Windows'
+"Open with" dialog. Keep the `launcher` folder inside this repository.
+
+Both entry points use the same GUI and launcher settings:
+
+- **Open Minecraft** opens the official Minecraft Launcher. It detects standard
+  desktop and Microsoft Store installations; select a custom launcher executable
+  in Settings if necessary. Authentication stays in the official launcher.
+- **Open Forge installer** starts the bundled 1.20.1 / 47.4.26 installer using
+  Java explicitly, bypassing JAR file associations. You confirm the action and
+  choose installation options in Forge's own window. If no window appears, read
+  `launcher\forge-installer.log`. Git LFS pointer files must be downloaded before
+  they can run as JARs.
+- **World, mod, and resource-pack shortcuts** open the local folders. The mod
+  count includes nested copies and installers, not just usable unique mods.
+
+This is a **launcher hub, not a game runtime or modpack installer**. It does not
+automatically select a profile, copy saves, install mods, modify third-party
+JARs, or bypass Minecraft ownership. Run vanilla Java 1.20.1 once before installing
+Forge. Select the appropriate profile in Minecraft Launcher and check its game
+directory. Back up and copy the world into that directory's `saves` folder while
+Minecraft is closed, and install only compatible mods. Do not copy this entire
+mixed-loader collection into an active `mods` folder.
+
+Local launcher preferences and installer logs are ignored by Git. To run the
+small dependency-free checks, compile the two Java source files into a temporary
+directory with `javac --release 17 -d <temp-dir> launcher\MineCanonLauncher.java
+launcher\MineCanonLauncherTest.java`, then run `java -Djava.awt.headless=true
+-cp <temp-dir> MineCanonLauncherTest`.
+
 ## Contributing
 
 Back up the world and close Minecraft before editing or copying save files.

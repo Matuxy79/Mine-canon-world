@@ -1,0 +1,26 @@
+# Local Minecraft runtime state and preferences
+/logs/
+/crash-reports/
+/options.txt
+/optionsof.txt
+/usercache.json
+**/session.lock
+
+# Player-specific world progress
+/saves/**/playerdata/
+/saves/**/advancements/
+/saves/**/stats/
+
+# Backups and incomplete downloads
+**/level.dat_old
+*.crdownload
+*.part
+*.tmp
+
+# Keep third-party binaries local until redistribution rights are verified
+*.jar
+
+# Operating-system metadata
+Thumbs.db
+Desktop.ini
+.DS_Store

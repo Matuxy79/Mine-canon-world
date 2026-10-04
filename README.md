@@ -36,11 +36,12 @@ Keep changes focused on the shared world, lore, and game experience. For changes
 to third-party mods, document their source, version, license, and any additional
 permission relied on, and preserve required attribution and notices.
 
-Git ignores local logs, player-specific progress, preferences, incomplete
-downloads, and JAR binaries by default. Ignoring a file does not delete it from
-the local installation. Do not force-add third-party binaries without first
-confirming redistribution rights and checking the hosting service's file-size
-limits.
+Git ignores local logs, player-specific progress, preferences, and incomplete
+downloads. JAR binaries are ignored by default except in `mods-1.20.1-base/`,
+whose mod JARs are tracked via Git LFS. Ignoring a file does not delete it from
+the local installation. Do not force-add other third-party binaries without
+first confirming redistribution rights and checking the hosting service's
+file-size limits.
 
 ## Licensing and fan-project status
 

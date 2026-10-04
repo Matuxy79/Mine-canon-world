@@ -20,6 +20,10 @@
 # Keep third-party binaries local until redistribution rights are verified
 *.jar
 
+# Exception: track the local mod base folder via Git LFS (owner-authorized)
+!mods-1.20.1-base/**
+mods-1.20.1-base/**/*.crdownload
+
 # Operating-system metadata
 Thumbs.db
 Desktop.ini

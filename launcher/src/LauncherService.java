@@ -13,6 +13,8 @@ final class LauncherService {
     static final String INSTALLER="forge-1.20.1-47.4.26-installer.jar";
     static final String SHA="138961bc2a5f085ced0b5db2cd72c6caad20b25e22bcdccd031b4fc9182e8186";
     static final String[] IDS={"first-breath","nocturne-west","chakra-nations","nen-new-world","curse-modernity","dark-continent"};
+    static final String[] AGE_TAGS={"1","2","3","4","4+","5"};// written as -Dminecanon.age into each profile for the in-game hub mod
+
     static final String[] NAMES={"First Breath","Nocturne West","Chakra Nations","Nen New World","Curse Modernity","Dark Continent"};
     static final String[] LORE={"Breath, bending and the first disciplines of the Canon Field.","Bloodlines, sacred relics and the moonlit western kingdoms.","Seals, summons and the rise of the clan-state civilizations.","Aura, contracts and the age of licensed hunters.","Domains, binding vows and the hidden urban world.","Forbidden archaeology beyond the boundaries of known canon."};
     final Path home, bundle;
@@ -72,9 +74,13 @@ final class LauncherService {
         Path temp=Files.createTempFile(file.getParent(),"state-",".tmp");
         try{Files.writeString(temp,new GsonBuilder().setPrettyPrinting().create().toJson(o));atomic(temp,file);}finally{Files.deleteIfExists(temp);}
     }
-    /** The in-game UI mod shipped beside this app, if built. */
-    Path uiMod(){try(var s=Files.list(bundle)){return s.filter(p->p.getFileName().toString().matches("minecanon-ui-\\d.*\\.jar")).sorted().findFirst().orElse(null);}catch(IOException e){return null;}}
-    void installUiMod(int i)throws IOException {Path mod=uiMod();if(mod==null)return;Path target=ensureInstance(i).resolve("mods").resolve(mod.getFileName());if(!Files.exists(target))Files.copy(mod,target);}
+    /** The in-game Mine Canon hub mod (v2) shipped beside this app, if built. */
+    Path uiMod(){try(var s=Files.list(bundle)){return s.filter(p->p.getFileName().toString().matches("minecanon-\\d.*\\.jar")).sorted().findFirst().orElse(null);}catch(IOException e){return null;}}
+    void installUiMod(int i)throws IOException {
+        Path mods=ensureInstance(i).resolve("mods");
+        Path mod=uiMod();if(mod!=null){Path target=mods.resolve(mod.getFileName());if(!Files.exists(target))Files.copy(mod,target);}
+        try(var s=Files.list(mods)){for(Path old:s.filter(p->p.getFileName().toString().startsWith("minecanon-ui-")).toList())Files.deleteIfExists(old);}catch(IOException ignored){}
+    }
     Path profilesPath(){
         Path standard=minecraft().resolve("launcher_profiles.json"),store=minecraft().resolve("launcher_profiles_microsoft_store.json");
         String choice=config.getProperty("profiles","auto");
@@ -97,7 +103,7 @@ final class LauncherService {
             JsonObject p=profiles.has(key)?profiles.getAsJsonObject(key):new JsonObject();
             if(!p.has("created"))p.addProperty("created",Instant.now().toString());
             p.addProperty("name","Mine Canon | "+NAMES[i]);p.addProperty("type","custom");p.addProperty("lastVersionId",VERSION);
-            p.addProperty("gameDir",ensureInstance(i).toAbsolutePath().toString());p.addProperty("javaArgs","-Xmx"+memory()+"G -Xms1G");
+            p.addProperty("gameDir",ensureInstance(i).toAbsolutePath().toString());p.addProperty("javaArgs","-Xmx"+memory()+"G -Xms1G -Dminecanon.age="+AGE_TAGS[i]);
             p.addProperty("icon","Grass");profiles.add(key,p);
             Path backups=home.resolve("profile-backups");Files.createDirectories(backups);
             Path backup=backups.resolve(path.getFileName()+"."+System.currentTimeMillis()+"."+UUID.randomUUID()+".bak");

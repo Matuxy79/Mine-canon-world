@@ -100,6 +100,13 @@ if (-not $SkipTests) {
     Invoke-Tool 'java' @('-Djava.awt.headless=true', '-cp', $classpath, 'SelfTest', $stage) 'SelfTest failed.'
 }
 
+# --- In-game hub mod (v2) ----------------------------------------------------
+# Ships in the app folder; the launcher auto-installs it into every age instance
+# and writes -Dminecanon.age into the profile. Staged after SelfTest so the
+# test bundle stays without it, matching a first run.
+$modJar = Join-Path $root 'mod\jar\minecanon-1.0.0.jar'
+if (Test-Path $modJar) { Copy-Item $modJar $stage } else { Write-Warning 'mod\jar\minecanon-1.0.0.jar not found; the launcher will run without auto-installing the in-game hub mod.' }
+
 $icon = Join-Path $work 'MineCanon.ico'
 Invoke-Tool 'java' @('-Djava.awt.headless=true', '-cp', $classpath, 'MineCanonIcon', $icon) 'Icon creation failed.'
 

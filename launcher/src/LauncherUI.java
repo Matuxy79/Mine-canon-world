@@ -1,5 +1,6 @@
 import javax.swing.*;
 import javax.swing.border.*;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
@@ -73,6 +74,8 @@ final class LauncherUI extends JPanel {
         }.execute();
     }
 
+    boolean setupOffered;
+    void offerSetup(){if(setupOffered)return;setupOffered=true;install();}
     void install(){
         String base=service.vanillaInstalled()?"":"First run Minecraft Java 1.20.1 once from the official launcher.\n\n";
         int ok=JOptionPane.showConfirmDialog(this,base+"The bundled Forge installer will open. Choose Install client.\nSet its installation folder to:\n"+service.minecraft()+"\n\nAfter it finishes, use Worlds → Prepare profile.\nOpen the installer now?","Forge 47.4.26 setup",JOptionPane.OK_CANCEL_OPTION);
@@ -99,23 +102,62 @@ final class LauncherUI extends JPanel {
         wrap.add(rows,BorderLayout.CENTER);JPanel actions=panel();actions.setLayout(new FlowLayout(FlowLayout.LEFT,0,0));ActionButton p=new ActionButton("Prepare profile",true);p.setPreferredSize(new Dimension(190,48));p.addActionListener(e->prepare());actions.add(p);ActionButton f=new ActionButton("Open instance folder",false);f.setPreferredSize(new Dimension(250,48));f.addActionListener(e->{try{service.openFolder(service.ensureInstance(service.selected()));}catch(Exception ex){error(ex);}});actions.add(Box.createHorizontalStrut(12));actions.add(f);wrap.add(actions,BorderLayout.SOUTH);return wrap;
     }
     JComponent mods(){
-        JPanel p=panel();p.setLayout(new BorderLayout(0,20));p.add(note("Local JAR files for "+LauncherService.NAMES[service.selected()]+". Use mods compatible with Minecraft 1.20.1 and Forge. A listed file is not a compatibility check."),BorderLayout.NORTH);
-        DefaultListModel<String> model=new DefaultListModel<>();try{var paths=service.mods(service.selected());if(paths.isEmpty())model.addElement("No mods installed in this instance yet.");else for(Path file:paths)model.addElement(file.getFileName()+"   ·   "+(Files.size(file)/1024)+" KB");}catch(Exception e){model.addElement("Could not read mods: "+e.getMessage());}
-        JList<String> list=new JList<>(model);list.setBackground(PANEL);list.setForeground(TEXT);list.setFont(sans(16));list.setFixedCellHeight(44);list.setBorder(new EmptyBorder(12,16,12,16));JScrollPane scroll=new JScrollPane(list);scroll.setBorder(new LineBorder(LINE));p.add(scroll,BorderLayout.CENTER);
-        JPanel buttons=panel();buttons.setLayout(new FlowLayout(FlowLayout.LEFT,0,0));ActionButton b=new ActionButton("Open mods folder",true);b.setPreferredSize(new Dimension(205,48));b.addActionListener(e->{try{service.openFolder(service.ensureInstance(service.selected()).resolve("mods"));}catch(Exception ex){error(ex);}});buttons.add(b);buttons.add(Box.createHorizontalStrut(12));ActionButton refresh=new ActionButton("Refresh list",false);refresh.setPreferredSize(new Dimension(150,48));refresh.addActionListener(e->showPage("Mods"));buttons.add(refresh);p.add(buttons,BorderLayout.SOUTH);return p;
+        int age=service.selected();
+        JPanel p=panel();p.setLayout(new BorderLayout(0,16));
+        p.add(note("Scan the mod library, then auto-sort into "+LauncherService.NAMES[age]+". Library originals are never modified; only copies enter the instance. Incompatible mods are skipped with a reason. In game, press O to open the MineCanon UI."),BorderLayout.NORTH);
+        java.util.List<ModScanner.ModInfo> library;try{library=service.scanLibrary();}catch(Exception e){library=java.util.List.of();}
+        String[] cols={"Mod","Loader","MC range","Status"};
+        Object[][] rows=new Object[Math.max(library.size(),1)][4];
+        java.util.List<Color> rowColors=new ArrayList<>();
+        if(library.isEmpty()){rows[0]=new Object[]{"Library is empty or missing: "+service.library(),"","",""};rowColors.add(MUTED);}
+        else for(int i=0;i<library.size();i++){ModScanner.ModInfo m=library.get(i);
+            rows[i]=new Object[]{m.name()+(m.version().isEmpty()?"":"  "+m.version()),m.loader(),m.mcRange().isEmpty()?"—":m.mcRange(),m.status()+" · "+m.detail()};
+            rowColors.add(m.status()==ModScanner.Status.COMPATIBLE?SAGE:m.status()==ModScanner.Status.UNKNOWN?MUTED:ORANGE);}
+        JTable table=new JTable(rows,cols){public boolean isCellEditable(int r,int c){return false;}public Component prepareRenderer(TableCellRenderer r,int row,int col){Component c=super.prepareRenderer(r,row,col);c.setBackground(PANEL);c.setForeground(rowColors.get(row));c.setFont(sans(13));return c;}};
+        table.setRowHeight(34);table.setBackground(PANEL);table.setForeground(TEXT);table.setShowGrid(false);table.setIntercellSpacing(new Dimension());table.getTableHeader().setBackground(BG);table.getTableHeader().setForeground(MUTED);table.getTableHeader().setFont(sans(12));table.getTableHeader().setReorderingAllowed(false);
+        JPanel left=panel();left.setLayout(new BorderLayout(0,6));left.add(label("MOD LIBRARY — "+library.size()+" JAR(s) scanned",15,SAGE),BorderLayout.NORTH);JScrollPane libScroll=new JScrollPane(table);libScroll.setBorder(new LineBorder(LINE));libScroll.getViewport().setBackground(PANEL);left.add(libScroll,BorderLayout.CENTER);
+        DefaultListModel<String> model=new DefaultListModel<>();
+        try{var paths=service.mods(age);
+            if(paths.isEmpty())model.addElement("No mods installed in this instance yet.");
+            else for(Path file:paths){ModScanner.ModInfo m=ModScanner.scan(file);model.addElement(m.status()+"    "+m.name()+(m.version().isEmpty()?"":"  "+m.version()));}
+        }catch(Exception e){model.addElement("Could not read mods: "+e.getMessage());}
+        JList<String> list=new JList<>(model);list.setBackground(PANEL);list.setForeground(TEXT);list.setFont(sans(14));list.setFixedCellHeight(34);list.setBorder(new EmptyBorder(10,14,10,14));
+        JPanel right=panel();right.setLayout(new BorderLayout(0,6));right.add(label("THIS AGE — "+LauncherService.NAMES[age],15,TEXT),BorderLayout.NORTH);JScrollPane instScroll=new JScrollPane(list);instScroll.setBorder(new LineBorder(LINE));instScroll.getViewport().setBackground(PANEL);right.add(instScroll,BorderLayout.CENTER);
+        JSplitPane split=new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,left,right);split.setOpaque(false);split.setBorder(null);split.setResizeWeight(.62);split.setBackground(BG);p.add(split,BorderLayout.CENTER);
+        JPanel buttons=panel();buttons.setLayout(new FlowLayout(FlowLayout.LEFT,0,0));
+        ActionButton sort=new ActionButton("Auto-sort for "+LauncherService.NAMES[age],true);sort.setPreferredSize(new Dimension(260,48));
+        sort.addActionListener(e->autoSort());buttons.add(sort);buttons.add(Box.createHorizontalStrut(12));
+        ActionButton b=new ActionButton("Open mods folder",false);b.setPreferredSize(new Dimension(205,48));b.addActionListener(e->{try{service.openFolder(service.ensureInstance(service.selected()).resolve("mods"));}catch(Exception ex){error(ex);}});buttons.add(b);buttons.add(Box.createHorizontalStrut(12));
+        ActionButton refresh=new ActionButton("Refresh",false);refresh.setPreferredSize(new Dimension(140,48));refresh.addActionListener(e->showPage("Mods"));buttons.add(refresh);
+        p.add(buttons,BorderLayout.SOUTH);return p;
+    }
+    void autoSort(){
+        int age=service.selected();
+        try{if(service.scanLibrary().isEmpty()){info("No mods found in the library folder:\n"+service.library()+"\n\nAdd mods there or set the folder in Settings.");return;}}
+        catch(Exception e){error(e);return;}
+        int ok=JOptionPane.showConfirmDialog(this,"Copy all mods compatible with Minecraft 1.20.1 / Forge 47.4.26\nfrom the library into "+LauncherService.NAMES[age]+"?\n\nOriginals are not modified. Incompatible or duplicate mods are skipped.\nChanges apply the next time Minecraft starts.","Auto-sort mods",JOptionPane.OK_CANCEL_OPTION);
+        if(ok!=JOptionPane.OK_OPTION)return;
+        canon.event(service,"LOCAL","Auto-sort requested for "+LauncherService.NAMES[age]+".");
+        new SwingWorker<int[],Void>(){protected int[] doInBackground()throws Exception{return service.sortInto(age,false);}
+            protected void done(){try{int[] r=get();service.writeState(age);canon.event(service,"LOCAL","Auto-sort copied "+r[0]+" mods; skipped "+r[1]+" incompatible, "+r[2]+" already present, "+r[3]+" failed.");
+                info("Copied "+r[0]+" mod(s) into "+LauncherService.NAMES[age]+".\nSkipped: "+r[1]+" incompatible, "+r[2]+" already present, "+r[3]+" failed.\n\nStart the game from the official launcher to load them.");}
+                catch(Exception ex){error(ex);}showPage("Mods");}}.execute();
     }
     JComponent settings(){
         JPanel outer=panel();outer.setLayout(new BorderLayout());JPanel p=panel();p.setLayout(new GridBagLayout());GridBagConstraints c=new GridBagConstraints();c.gridx=0;c.gridy=0;c.weightx=1;c.fill=GridBagConstraints.HORIZONTAL;c.anchor=GridBagConstraints.NORTHWEST;c.insets=new Insets(0,0,14,0);
         JTextField mc=field(service.minecraft().toString()),exe=field(service.config.getProperty("launcher",""));
         p.add(label("Minecraft installation folder",15,TEXT),c);c.gridy++;p.add(pathRow(mc,true),c);c.gridy++;
         p.add(label("Minecraft launcher executable (optional; blank = automatic)",15,TEXT),c);c.gridy++;p.add(pathRow(exe,false),c);c.gridy++;
+        p.add(label("Mod library folder (blank = mods-1.20.1-base beside the app)",15,TEXT),c);c.gridy++;JTextField lib=field(service.config.getProperty("library",""));p.add(pathRow(lib,true),c);c.gridy++;
         p.add(label("Profile file",15,TEXT),c);c.gridy++;JComboBox<String> profile=new JComboBox<>(new String[]{"Auto-detect","Standard launcher","Microsoft Store launcher"});profile.setSelectedIndex(switch(service.config.getProperty("profiles","auto")){case "standard"->1;case "store"->2;default->0;});styleCombo(profile);p.add(profile,c);c.gridy++;
         p.add(label("Game memory allocation",15,TEXT),c);c.gridy++;JComboBox<Integer> ram=new JComboBox<>(new Integer[]{2,3,4,5,6,7,8,9,10,11,12,13,14,15,16});ram.setSelectedItem(service.memory());styleCombo(ram);p.add(ram,c);c.gridy++;
+        p.add(label("Auto-open Forge setup when missing",15,TEXT),c);c.gridy++;JComboBox<String> auto=new JComboBox<>(new String[]{"On","Off"});auto.setSelectedIndex("false".equals(service.config.getProperty("autoopen","true"))?1:0);styleCombo(auto);p.add(auto,c);c.gridy++;
         p.add(note("Memory is applied when you prepare the selected profile. Leave enough RAM for Windows and other apps. Instance data: "+service.home+"\n\nYour name is launcher branding, not your Minecraft account. Sign-in stays in the official launcher."),c);c.gridy++;
         ActionButton save=new ActionButton("Save settings",true);save.setPreferredSize(new Dimension(200,48));save.addActionListener(e->{try{
             Path dir=Path.of(mc.getText().trim());if(!dir.isAbsolute()||!Files.isDirectory(dir))throw new Exception("Choose an existing absolute Minecraft directory.");
             String custom=exe.getText().trim();if(!custom.isEmpty()&&!Files.isRegularFile(Path.of(custom)))throw new Exception("Choose an existing launcher executable, or leave the field empty.");
-            service.config.setProperty("minecraft",dir.toString());service.config.setProperty("launcher",custom);service.config.setProperty("ram",ram.getSelectedItem().toString());service.config.setProperty("profiles",new String[]{"auto","standard","store"}[profile.getSelectedIndex()]);service.save();refresh();info("Settings saved. Use Worlds → Prepare profile to apply memory changes.");
+            String library=lib.getText().trim();if(!library.isEmpty()&&!Files.isDirectory(Path.of(library)))throw new Exception("Choose an existing mod library folder, or leave the field empty.");
+            service.config.setProperty("minecraft",dir.toString());service.config.setProperty("launcher",custom);service.config.setProperty("library",library);service.config.setProperty("autoopen","On".equals(auto.getSelectedItem())?"true":"false");service.config.setProperty("ram",ram.getSelectedItem().toString());service.config.setProperty("profiles",new String[]{"auto","standard","store"}[profile.getSelectedIndex()]);service.save();refresh();info("Settings saved. Use Worlds → Prepare profile to apply memory changes.");
         }catch(Exception ex){error(ex);}});p.add(save,c);outer.add(p,BorderLayout.NORTH);JScrollPane scroll=new JScrollPane(outer);scroll.setBorder(null);scroll.setOpaque(false);scroll.getViewport().setOpaque(false);return scroll;
     }
     void styleCombo(JComboBox<?> box){box.setFont(sans(15));box.setBackground(PANEL);box.setForeground(TEXT);box.setPreferredSize(new Dimension(100,38));}

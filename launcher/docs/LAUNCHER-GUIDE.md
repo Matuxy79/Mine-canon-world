@@ -41,6 +41,22 @@ Existing profiles and unrelated JSON settings are preserved. Profile writing ref
 
 To restore: close both launchers; copy the desired file from `profile-backups` back over the corresponding `launcher_profiles.json` or `launcher_profiles_microsoft_store.json` in your Minecraft folder.
 
+## Mod library, auto-sort, and the in-game UI
+
+The Mods page is a sort manager:
+
+- **MOD LIBRARY** lists every JAR in the mod library (default: `mods-1.20.1-base` beside the app; override in Settings) with a compatibility verdict: COMPATIBLE (Forge, Minecraft 1.20.1), WRONG-LOADER (Fabric), WRONG-VERSION, or UNKNOWN (no readable metadata).
+- **Auto-sort for <age>** copies only compatible mods into the selected age's `mods` folder. Library originals are never modified; existing files are skipped. Changes apply the next time Minecraft starts.
+- **THIS AGE** lists the instance's installed mods with the same verdicts.
+
+Each age folder also receives a `minecanon-state.json` bridge written by "Prepare profile". The in-game **MineCanon UI** mod reads it: press **O** in game to open the canon screen, check the current age and lore, audit installed mods, sort for the running age or for every other age, and move the desktop launcher's age selection. In-game file changes apply on the next game start.
+
+Other conveniences:
+
+- `MineCanon.exe --quick` opens a compact always-on-top window straight on the Mods page.
+- If Forge is missing at startup, the setup prompt opens automatically once (toggle in Settings).
+- The in-game UI mod JAR, when present in the app folder, is installed into the age's `mods` folder by "Prepare profile".
+
 The original Forge JAR is included **unchanged**. The build places it next to `MineCanon.jar` in `launcher\bin\MineCanon\app\`; the custom launcher uses the Gson JSON library already inside that JAR. Forge's installer opens only when you select the setup action. No automatic downloads or installer execution happen on startup.
 
 Installer SHA-256:

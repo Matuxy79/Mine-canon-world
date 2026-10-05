@@ -9,6 +9,7 @@ public class SelfTest {
  static void expectFailure(Thrower t,String label)throws Exception{boolean failed=false;try{t.run();}catch(Exception e){failed=true;}check(failed,label);}
  static boolean geometry(java.awt.Component c){if(c.getWidth()<0||c.getHeight()<0)return false;if(c instanceof java.awt.Container n)for(var child:n.getComponents())if(!geometry(child))return false;return true;}
  interface Thrower{void run()throws Exception;}
+ static void writeZip(Path file,String entry,String content)throws Exception{try(var z=new java.util.zip.ZipOutputStream(Files.newOutputStream(file))){z.putNextEntry(new java.util.zip.ZipEntry(entry));z.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));z.closeEntry();}}
  public static void main(String[] args)throws Exception {
   Path temp=Files.createTempDirectory("minecanon-test-"),bundle=Path.of(args[0]).toAbsolutePath(),mc=temp.resolve("minecraft");Files.createDirectories(mc);
   LauncherService s=new LauncherService(temp.resolve("data"),bundle);s.config.setProperty("minecraft",mc.toString());
@@ -25,6 +26,23 @@ public class SelfTest {
   s.prepareProfile(1);root=JsonParser.parseString(Files.readString(profiles)).getAsJsonObject();check(root.getAsJsonObject("profiles").size()==3,"separate eras get separate profiles");check(!s.instance(0).equals(s.instance(1)),"era save directories isolated");
   s.select(2);check(new LauncherService(s.home,bundle).selected()==2,"world selection persists");
   Files.writeString(s.instance(0).resolve("mods/example.jar"),"test");Files.writeString(s.instance(0).resolve("mods/notes.txt"),"test");check(s.mods(0).size()==1,"mods list filters JAR files");
+  // ModScanner: loader detection, Minecraft version ranges, auto-sort, in-game state bridge
+  check(ModScanner.versionMatches("[1.20.1]","1.20.1")&&ModScanner.versionMatches("[1.20,)","1.20.1")&&ModScanner.versionMatches("[1.20.1,1.21)","1.20.1")&&ModScanner.versionMatches("1.20.1","1.20.1"),"version ranges accept 1.20.1");
+  check(!ModScanner.versionMatches("[1.20.4,)","1.20.1")&&!ModScanner.versionMatches("(1.20.1,1.21)","1.20.1"),"version ranges reject other versions");
+  Path libs=temp.resolve("library");Files.createDirectories(libs);
+  writeZip(libs.resolve("fabric-mod.jar"),"fabric.mod.json","{\"id\":\"fabricmod\",\"version\":\"1.0\",\"name\":\"Fabric Mod\",\"depends\":{\"minecraft\":\"1.20.1\"}}");
+  writeZip(libs.resolve("forge-good.jar"),"META-INF/mods.toml","modLoader=\"javafml\"\n[[mods]]\nmodId=\"canonmod\"\nversion=\"1.0\"\ndisplayName=\"Canon Mod\"\n[[dependencies.minecraft]]\nmodId=\"minecraft\"\nversionRange=\"[1.20.1]\"\n");
+  writeZip(libs.resolve("plugin.jar"),"plugin.yml","name: Plugin");
+  var infos=ModScanner.scanFolder(libs);
+  check(infos.size()==3,"scanner finds all three test JARs");
+  check(infos.get(0).status()==ModScanner.Status.WRONG_LOADER,"Fabric mod detected as wrong loader");
+  check(infos.get(1).status()==ModScanner.Status.COMPATIBLE&&infos.get(1).modId().equals("canonmod"),"Forge 1.20.1 mod detected compatible");
+  check(infos.get(2).status()==ModScanner.Status.UNKNOWN,"metadata-less JAR stays unknown");
+  s.config.setProperty("library",libs.toString());
+  int[] counts=s.sortInto(0,true);
+  check(counts[0]==1&&counts[1]==2,"dry-run sort plans one copy and two skips");
+  s.sortInto(0,false);check(s.mods(0).size()==2,"sort copies only the compatible mod");
+  s.writeState(1);check(JsonParser.parseString(Files.readString(s.stateFile(1))).getAsJsonObject().get("ageName").getAsString().equals(LauncherService.NAMES[1]),"in-game state bridge records the age");
   check(s.verifyInstaller().getFileName().toString().equals(LauncherService.INSTALLER),"supplied installer SHA-256 verified");
   Files.writeString(profiles,"malformed");expectFailure(()->s.prepareProfile(0),"malformed launcher JSON fails safely");check(Files.readString(profiles).equals("malformed"),"malformed source stays untouched");
   Files.writeString(profiles,original);Path store=mc.resolve("launcher_profiles_microsoft_store.json");Files.writeString(store,original);expectFailure(()->s.profilesPath(),"ambiguous profile files require explicit selection");s.config.setProperty("profiles","store");s.prepareProfile(0);check(Files.readString(profiles).equals(original),"Store profile update leaves standard file alone");

@@ -19,7 +19,17 @@ $root = Split-Path $launcher -Parent
 $forgeName = 'forge-1.20.1-47.4.26-installer.jar'
 $forgeSha = '138961BC2A5F085CED0B5DB2CD72C6CAAD20B25E22BCDCCD031B4FC9182E8186'
 $forge = Join-Path $root "mods-1.20.1-base\$forgeName"
-$work = if ($WorkDir) { $WorkDir } else { Join-Path $launcher 'build' }
+# WorkDir is restricted to build* folders under the launcher directory or the user temp folder,
+# so cleanup can never touch caller data elsewhere. The default is outside any synced folder
+# (Desktop\OneDrive etc.), because jlink/jpackage stall there when the sync engine holds new files.
+if ($WorkDir) {
+    $WorkDirFull = [IO.Path]::GetFullPath((Join-Path (Get-Location) $WorkDir))
+    $insideLauncher = $WorkDirFull.StartsWith($launcher, [StringComparison]::OrdinalIgnoreCase)
+    $insideTemp = $WorkDirFull.StartsWith([IO.Path]::GetFullPath($env:TEMP), [StringComparison]::OrdinalIgnoreCase)
+    $leafIsBuild = (Split-Path $WorkDirFull -Leaf) -like 'build*'
+    if (-not (($insideLauncher -or $insideTemp) -and $leafIsBuild)) { throw 'WorkDir must be a build* folder inside the launcher directory or the user temp folder.' }
+    $work = $WorkDirFull
+} else { $work = Join-Path $env:TEMP 'minecanon-build' }
 $bin = Join-Path $launcher 'bin'
 $app = Join-Path $bin 'MineCanon'
 $exe = Join-Path $app 'MineCanon.exe'
@@ -111,16 +121,22 @@ Invoke-Tool 'javac' @('--release', '17', '-d', $classes, (Join-Path $launcher 'F
 & (Join-Path $runtime 'bin\java.exe') '-Djava.awt.headless=true' -cp "$classes;$forge" ForgeRuntimeCheck
 if ($LASTEXITCODE -ne 0) { throw 'Bundled runtime cannot load the Forge install profile.' }
 
+# Package into a staging folder inside the work area first (never the synced launcher folder),
+# then swap: a failed packaging run never destroys the previous working app.
+$staging = Join-Path $work 'packaged'
+if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
+New-Item -ItemType Directory -Force $staging | Out-Null
+Write-Host 'Packaging MineCanon.exe...'
+Invoke-Tool 'jpackage' @('--type', 'app-image', '--name', 'MineCanon', '--dest', $staging,
+    '--input', $stage, '--main-jar', 'MineCanon.jar', '--main-class', 'MineCanonLauncher',
+    '--runtime-image', $runtime, '--icon', $icon, '--vendor', 'John Matukutire',
+    '--description', 'Mine Canon World desktop launcher', '--app-version', '2.0.0') 'Native packaging failed.'
 if (Test-Path $app) {
     Write-Host 'Replacing previous build (close MineCanon first)...'
     Remove-Item -Recurse -Force $app
 }
 New-Item -ItemType Directory -Force $bin | Out-Null
-Write-Host 'Packaging MineCanon.exe...'
-Invoke-Tool 'jpackage' @('--type', 'app-image', '--name', 'MineCanon', '--dest', $bin,
-    '--input', $stage, '--main-jar', 'MineCanon.jar', '--main-class', 'MineCanonLauncher',
-    '--runtime-image', $runtime, '--icon', $icon, '--vendor', 'John Matukutire',
-    '--description', 'Mine Canon World desktop launcher', '--app-version', '2.0.0') 'Native packaging failed.'
+Move-Item (Join-Path $staging 'MineCanon') $app
 New-Item -ItemType File (Join-Path $app $marker) | Out-Null
 
 # --- Shortcuts -------------------------------------------------------------

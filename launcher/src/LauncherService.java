@@ -40,6 +40,41 @@ final class LauncherService {
     String status(){return forgeInstalled()?"FORGE PROFILE DETECTED":"FORGE SETUP REQUIRED";}
     Path ensureInstance(int i)throws IOException {Path p=instance(i);Files.createDirectories(p.resolve("mods"));Files.createDirectories(p.resolve("saves"));Files.createDirectories(p.resolve("resourcepacks"));return p;}
     java.util.List<Path> mods(int i)throws IOException {Path p=instance(i).resolve("mods");if(!Files.isDirectory(p))return java.util.List.of();try(var s=Files.list(p)){return s.filter(x->Files.isRegularFile(x)&&x.getFileName().toString().toLowerCase().endsWith(".jar")).sorted().toList();}}
+    /** Mod library folder: explicit setting wins, else the repo's mods-1.20.1-base found by walking up from the app bundle. */
+    Path library(){
+        String custom=config.getProperty("library","").trim();
+        if(!custom.isEmpty())return Path.of(custom);
+        for(Path probe=bundle;probe!=null;probe=probe.getParent()){Path candidate=probe.resolve("mods-1.20.1-base");if(Files.isDirectory(candidate))return candidate;}
+        return bundle.resolve("mods-1.20.1-base");
+    }
+    java.util.List<ModScanner.ModInfo> scanLibrary()throws IOException{return ModScanner.scanFolder(library());}
+    /** Copies every compatible library mod into the age's instance mods folder. Returns {copied, incompatible, alreadyPresent, failed}. */
+    int[] sortInto(int i,boolean dryRun)throws IOException {
+        int copied=0,skipped=0,present=0,failed=0;
+        Path mods=ensureInstance(i).resolve("mods");
+        for(ModScanner.ModInfo info:scanLibrary()){
+            if(info.status()!=ModScanner.Status.COMPATIBLE){skipped++;continue;}
+            Path target=mods.resolve(info.file().getFileName());
+            if(Files.exists(target)){present++;continue;}
+            if(dryRun){copied++;continue;}
+            try{Files.copy(info.file(),target);copied++;}catch(IOException e){failed++;}
+        }
+        return new int[]{copied,skipped,present,failed};
+    }
+    /** Shared state file the in-game MineCanon UI reads to stay in sync with this launcher. */
+    Path stateFile(int i){return instance(i).resolve("minecanon-state.json");}
+    void writeState(int i)throws IOException {
+        Path file=stateFile(i);Files.createDirectories(file.getParent());
+        JsonObject o=new JsonObject();
+        o.addProperty("schema",1);o.addProperty("age",IDS[i]);o.addProperty("ageName",NAMES[i]);o.addProperty("lore",LORE[i]);
+        o.addProperty("mcVersion","1.20.1");o.addProperty("forge","47.4.26");o.addProperty("memory",memory());
+        o.addProperty("library",library().toAbsolutePath().toString());o.addProperty("generated",Instant.now().toString());
+        Path temp=Files.createTempFile(file.getParent(),"state-",".tmp");
+        try{Files.writeString(temp,new GsonBuilder().setPrettyPrinting().create().toJson(o));atomic(temp,file);}finally{Files.deleteIfExists(temp);}
+    }
+    /** The in-game UI mod shipped beside this app, if built. */
+    Path uiMod(){try(var s=Files.list(bundle)){return s.filter(p->p.getFileName().toString().matches("minecanon-ui-\\d.*\\.jar")).sorted().findFirst().orElse(null);}catch(IOException e){return null;}}
+    void installUiMod(int i)throws IOException {Path mod=uiMod();if(mod==null)return;Path target=ensureInstance(i).resolve("mods").resolve(mod.getFileName());if(!Files.exists(target))Files.copy(mod,target);}
     Path profilesPath(){
         Path standard=minecraft().resolve("launcher_profiles.json"),store=minecraft().resolve("launcher_profiles_microsoft_store.json");
         String choice=config.getProperty("profiles","auto");
@@ -73,6 +108,7 @@ final class LauncherService {
                 if(!Arrays.equals(before,Files.readAllBytes(path)))throw new IOException("Launcher profiles changed while saving. Close the official launcher and try again.");
                 atomic(tmp,path);
             }finally{Files.deleteIfExists(tmp);}
+            writeState(i);installUiMod(i);
             return backup;
         }
     }

@@ -34,12 +34,19 @@ Mine-canon-world/
 │  │  ├─ CanonModel.java          Ages/eras data, power math, dossier SHA audit
 │  │  ├─ LauncherService.java     Forge checks, per-age profiles, installer + Minecraft handoff
 │  │  ├─ MineCanonIcon.java       Window icon and MineCanon.ico generator
+│  │  ├─ ModScanner.java         Mod JAR metadata reader and compatibility verdicts
 │  │  └─ SelfTest.java            Headless checks run by the build (not shipped)
 │  ├─ assets/                 Bundled into the JAR: world.png, ages.png, dossier-sha256.properties
 │  ├─ dossier/                Lore dossiers shipped beside the app and SHA-verified at runtime
 │  ├─ docs/                   LAUNCHER-GUIDE.md (user guide), DESIGN.md, QA.md, design-refs/
-│  ├─ build/                  Build scratch space (generated, ignored)
 │  └─ bin/MineCanon/          Native app: MineCanon.exe + private Java runtime (generated, ignored)
+├─ minecanon-ui/               In-game Forge mod (ForgeGradle 6, MC 1.20.1, Java 17)
+│  ├─ build.gradle             Forge 47.4.26, official mappings, JDK 17 toolchain
+│  └─ src/main/java/minecanon/
+│     ├─ MineCanonMod.java         Mod entry point; registers the O keybind
+│     ├─ CanonScreen.java          In-game UI: age, lore, mod audit, auto-sort, age switch
+│     ├─ CanonState.java           Reads/writes the minecanon-state.json bridge
+│     └─ ModScanner.java           Same verdicts as the desktop scanner
 ├─ mods-1.20.1-base/          Collected mod JARs (Git LFS) and the pinned Forge 47.4.26 installer
 ├─ saves/                     World saves, including `minecraft world`
 └─ resourcepacks/             Resource packs
@@ -47,7 +54,9 @@ Mine-canon-world/
 
 The target game version is Minecraft 1.20.1. Files in the local mod folder are
 not a verified compatible modpack; check each mod's game version, loader, and
-dependencies before use.
+dependencies before use — the launcher's Mods page and the in-game MineCanon UI
+(`O` key) both show automated compatibility verdicts, but those are hints, not
+guarantees of dependency completeness.
 
 ## MineCanon launcher
 
@@ -72,6 +81,12 @@ for the full user guide.
    desktop, or `-SkipTests` to skip the checks.
 3. Double-click **`MineCanon.lnk`**. The packaged app needs no installed Java and
    no administrator rights. Close MineCanon before rebuilding.
+4. Optional, in-game UI mod: install **Gradle 8.x** and a JDK 17, then run
+   `gradle build` in `minecanon-ui/` (first run downloads the ForgeGradle
+   toolchain — it can take several minutes). Copy
+   `minecanon-ui/build/libs/minecanon-ui-1.0.0.jar` into
+   `launcher/bin/MineCanon/app/`; from then on "Prepare profile" installs it
+   into each age's mods folder, and the **O** key opens the canon screen in game.
 
 The shortcut stores an absolute path, so rebuild after moving the repository.
 

@@ -8,16 +8,35 @@ import java.util.zip.*;
  *  loader and Minecraft-version compatibility without loading any mod code. */
 public final class ModScanner {
     public static final String TARGET_MC="1.20.1";
-    public enum Status{COMPATIBLE,WRONG_LOADER,WRONG_VERSION,UNKNOWN}
+    public enum Status{COMPATIBLE,WRONG_LOADER,WRONG_VERSION,CONFLICT,UNKNOWN}
     public record ModInfo(Path file,String modId,String name,String version,String loader,String mcRange,Status status,String detail){}
     private ModScanner(){}
 
+    /** Known mod pairs that crash together. The key mod is held back whenever the value mod is also present. */
+    static final Map<String,Map.Entry<String,String>> CONFLICTS=Map.of(
+        "got",Map.entry("pixelmon","Pixelmon's quest loader reads data/*/quests from every mod and crashes on this mod's quest files (NullPointerException when opening Singleplayer)."));
+
     public static List<ModInfo> scanFolder(Path dir)throws java.io.IOException {
         if(!Files.isDirectory(dir))return List.of();
+        List<ModInfo> found;
         try(var s=Files.list(dir)){
-            return s.filter(f->Files.isRegularFile(f)&&f.getFileName().toString().toLowerCase().endsWith(".jar"))
+            found=s.filter(f->Files.isRegularFile(f)&&f.getFileName().toString().toLowerCase().endsWith(".jar"))
                 .sorted(Comparator.comparing(p->p.getFileName().toString().toLowerCase())).map(ModScanner::scan).toList();
         }
+        return markConflicts(found);
+    }
+
+    /** Downgrades COMPATIBLE mods that clash with another mod in the same set so they are never auto-installed beside it. */
+    static List<ModInfo> markConflicts(List<ModInfo> mods){
+        Set<String> ids=new HashSet<>();for(ModInfo m:mods)ids.add(m.modId());
+        List<ModInfo> out=new ArrayList<>();
+        for(ModInfo m:mods){
+            var rule=CONFLICTS.get(m.modId());
+            if(rule!=null&&m.status()==Status.COMPATIBLE&&ids.contains(rule.getKey()))
+                m=new ModInfo(m.file(),m.modId(),m.name(),m.version(),m.loader(),m.mcRange(),Status.CONFLICT,"Conflicts with "+rule.getKey()+": "+rule.getValue());
+            out.add(m);
+        }
+        return out;
     }
 
     public static ModInfo scan(Path jar){

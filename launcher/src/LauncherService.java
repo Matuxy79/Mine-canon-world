@@ -81,6 +81,18 @@ final class LauncherService {
         Path mod=uiMod();if(mod!=null){Path target=mods.resolve(mod.getFileName());if(!Files.exists(target))Files.copy(mod,target);}
         try(var s=Files.list(mods)){for(Path old:s.filter(p->p.getFileName().toString().startsWith("minecanon-ui-")).toList())Files.deleteIfExists(old);}catch(IOException ignored){}
     }
+    /** Last fix-pack outcome, shown in the boot log: what was repaired, or why it was skipped. */
+    String fixPackStatus="";
+    /** Regenerates the model-fix resource pack for this instance and enables it. Best effort: never blocks profile preparation. */
+    void installFixPack(int i){
+        try{
+            Path game=ensureInstance(i);Path pack=game.resolve("resourcepacks").resolve(ModFixer.PACK_NAME);
+            if(ModFixer.gameRunning(game)){fixPackStatus="Fix pack skipped: close the game for this age first.";return;}
+            ModFixer.Result r=ModFixer.build(game.resolve("mods"),pack);
+            if(!r.any()){fixPackStatus="Fix pack: no broken mod models found.";return;}
+            fixPackStatus="Fix pack: repaired "+r.parentsFixed()+" model parent(s) and "+r.rotationsFixed()+" rotation(s) in "+r.modelsPatched()+" model file(s)"+(ModFixer.enable(game)?".":"; enable it in Options > Resource Packs.");
+        }catch(Exception e){fixPackStatus="Fix pack skipped: "+e.getMessage();}
+    }
     Path profilesPath(){
         Path standard=minecraft().resolve("launcher_profiles.json"),store=minecraft().resolve("launcher_profiles_microsoft_store.json");
         String choice=config.getProperty("profiles","auto");
@@ -114,7 +126,7 @@ final class LauncherService {
                 if(!Arrays.equals(before,Files.readAllBytes(path)))throw new IOException("Launcher profiles changed while saving. Close the official launcher and try again.");
                 atomic(tmp,path);
             }finally{Files.deleteIfExists(tmp);}
-            writeState(i);installUiMod(i);
+            writeState(i);installUiMod(i);installFixPack(i);
             return backup;
         }
     }

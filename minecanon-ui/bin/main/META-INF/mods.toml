@@ -1,0 +1,22 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="CC BY-SA 4.0"
+
+[[mods]]
+modId="minecanon"
+version="1.0.0"
+displayName="MineCanon UI"
+authors="John Matukutire"
+description='''In-game Mine Canon companion for the fan-made Mine Canon World project: canon ages and lore, live mod compatibility audit, per-age auto-sort, and shared state with the MineCanon desktop launcher.'''
+
+[[dependencies.minecraft]]
+    modId="minecraft"
+    versionRange="[1.20.1]"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.forge]]
+    modId="forge"
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"

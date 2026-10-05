@@ -86,7 +86,7 @@ final class LauncherUI extends JPanel {
     void prepare(){
         int ok=JOptionPane.showConfirmDialog(this,"Close the official Minecraft launcher before continuing.\n\nCreate or update Mine Canon | "+LauncherService.NAMES[service.selected()]+"?\nOther profiles are preserved and a backup is saved.","Prepare profile",JOptionPane.OK_CANCEL_OPTION);
         if(ok!=JOptionPane.OK_OPTION)return;
-        try{service.prepareProfile(service.selected());canon.event(service,"LOCAL","Prepared official Minecraft profile: "+LauncherService.NAMES[service.selected()]);info("Profile ready: Mine Canon | "+LauncherService.NAMES[service.selected()]+"\n\nOpen Minecraft, choose this installation and press Play.\nMemory: "+service.memory()+" GB\nGame folder: "+service.instance(service.selected()));refresh();}catch(Exception e){error(e);}
+        try{service.prepareProfile(service.selected());canon.event(service,"LOCAL","Prepared official Minecraft profile: "+LauncherService.NAMES[service.selected()]);if(!service.fixPackStatus.isEmpty())canon.event(service,"LOCAL",service.fixPackStatus);info("Profile ready: Mine Canon | "+LauncherService.NAMES[service.selected()]+"\n\nOpen Minecraft, choose this installation and press Play.\nMemory: "+service.memory()+" GB\nGame folder: "+service.instance(service.selected())+(service.fixPackStatus.isEmpty()?"":"\n"+service.fixPackStatus));refresh();}catch(Exception e){error(e);}
     }
     JPanel panel(){JPanel p=new JPanel();p.setOpaque(false);return p;}
     JLabel label(String text,int size,Color color){JLabel l=new JLabel(text);l.setFont(sans(size));l.setForeground(color);return l;}

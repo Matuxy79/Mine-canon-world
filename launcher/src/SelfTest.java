@@ -40,6 +40,34 @@ public class SelfTest {
   check(infos.get(0).status()==ModScanner.Status.WRONG_LOADER,"Fabric mod detected as wrong loader");
   check(infos.get(1).status()==ModScanner.Status.COMPATIBLE&&infos.get(1).modId().equals("canonmod"),"Forge 1.20.1 mod detected compatible");
   check(infos.get(2).status()==ModScanner.Status.UNKNOWN,"metadata-less JAR stays unknown");
+  var got=new ModScanner.ModInfo(Path.of("got.jar"),"got","Game of Thrones","1","forge","",ModScanner.Status.COMPATIBLE,"");
+  var pixelmon=new ModScanner.ModInfo(Path.of("pixelmon.jar"),"pixelmon","Pixelmon","9","forge","",ModScanner.Status.COMPATIBLE,"");
+  var checked=ModScanner.markConflicts(java.util.List.of(got,pixelmon));
+  check(checked.get(0).status()==ModScanner.Status.CONFLICT&&checked.get(1).status()==ModScanner.Status.COMPATIBLE,"Game of Thrones is held back beside Pixelmon (quest loader crash)");
+  check(ModScanner.markConflicts(java.util.List.of(got)).get(0).status()==ModScanner.Status.COMPATIBLE,"Game of Thrones stays compatible without Pixelmon");
+  Path fixMods=temp.resolve("fix-mods"),fixPack=temp.resolve("fix-out").resolve(ModFixer.PACK_NAME);Files.createDirectories(fixMods);
+  try(var zo=new java.util.zip.ZipOutputStream(Files.newOutputStream(fixMods.resolve("blockbench.jar")))){
+   for(String[] e:new String[][]{
+    {"assets/demo/models/item/scroll.json","{\"parent\":\"scrolls_one\",\"textures\":{\"0\":\"demo:block/t\"}}"},
+    {"assets/demo/models/item/gen.json","{\"parent\":\"item/generated\",\"textures\":{\"layer0\":\"demo:item/g\"}}"},
+    {"assets/demo/models/item/plain.json","{\"parent\":\"lonely\",\"textures\":{\"layer0\":\"demo:item/p\"}}"},
+    {"assets/demo/models/custom/scrolls_one.json","{\"parent\":\"scrolls_one\",\"elements\":[{\"rotation\":{\"angle\":25,\"axis\":\"x\",\"origin\":[8,8,8]}}]}"}}){
+    zo.putNextEntry(new java.util.zip.ZipEntry(e[0]));zo.write(e[1].getBytes(java.nio.charset.StandardCharsets.UTF_8));zo.closeEntry();}
+  }
+  var fixed=ModFixer.build(fixMods,fixPack);
+  check(fixed.parentsFixed()==3&&fixed.rotationsFixed()==1&&fixed.modelsPatched()==3,"model fixer finds bare parents and bad rotations only");
+  try(var fz=new java.util.zip.ZipFile(fixPack.toFile())){
+   String scroll=new String(fz.getInputStream(fz.getEntry("assets/demo/models/item/scroll.json")).readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
+   String custom=new String(fz.getInputStream(fz.getEntry("assets/demo/models/custom/scrolls_one.json")).readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
+   String plain=new String(fz.getInputStream(fz.getEntry("assets/demo/models/item/plain.json")).readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
+   check(scroll.contains("\"demo:custom/scrolls_one\""),"bare parent repointed to the mod's own model");
+   check(!custom.contains("\"parent\"")&&custom.contains("22.5"),"self-referencing parent dropped and rotation snapped to 22.5");
+   check(plain.contains("\"item/generated\""),"textured item with no model gets item/generated");
+   check(fz.getEntry("assets/demo/models/item/gen.json")==null,"valid vanilla parents are left alone");
+  }
+  Path optionsGame=temp.resolve("opt-game");Files.createDirectories(optionsGame);Files.writeString(optionsGame.resolve("options.txt"),"lang:en_us\nresourcePacks:[]\n");
+  check(ModFixer.enable(optionsGame)&&Files.readString(optionsGame.resolve("options.txt")).contains("resourcePacks:[\"file/"+ModFixer.PACK_NAME+"\"]"),"fix pack enabled in options.txt");
+  ModFixer.enable(optionsGame);check(Files.readString(optionsGame.resolve("options.txt")).split(ModFixer.PACK_NAME,-1).length==2,"enabling twice does not duplicate the pack");
   s.config.setProperty("library",libs.toString());
   int[] counts=s.sortInto(0,true);
   check(counts[0]==1&&counts[1]==2,"dry-run sort plans one copy and two skips");

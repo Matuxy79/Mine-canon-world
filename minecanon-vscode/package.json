@@ -1,0 +1,187 @@
+{
+  "name": "minecanon-vscode",
+  "displayName": "MineCanon",
+  "description": "Mine Canon World toolkit: age switching, mod-library audit and auto-sort, launcher/mod build integration, and Forge 1.20.1 snippets.",
+  "version": "1.0.0",
+  "publisher": "minecanon",
+  "license": "CC-BY-SA-4.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Matuxy79/Mine-canon-world.git"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "scripts": {
+    "test": "node test/selftest.js"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "minecanon.selectAge",
+        "title": "Select Age",
+        "category": "MineCanon",
+        "icon": "$(swords)"
+      },
+      {
+        "command": "minecanon.refresh",
+        "title": "Refresh",
+        "category": "MineCanon",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "minecanon.sortIntoAge",
+        "title": "Auto-sort Mods into Age",
+        "category": "MineCanon",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "minecanon.scanLibrary",
+        "title": "Scan Mod Library",
+        "category": "MineCanon"
+      },
+      {
+        "command": "minecanon.scanGameMods",
+        "title": "Scan Game Mods Folder",
+        "category": "MineCanon"
+      },
+      {
+        "command": "minecanon.showState",
+        "title": "Show Canon State Bridge",
+        "category": "MineCanon"
+      },
+      {
+        "command": "minecanon.openAgeFolder",
+        "title": "Reveal Age Instance Folder",
+        "category": "MineCanon"
+      },
+      {
+        "command": "minecanon.openLibraryFolder",
+        "title": "Reveal Mod Library Folder",
+        "category": "MineCanon"
+      },
+      {
+        "command": "minecanon.openGameModsFolder",
+        "title": "Reveal Game Mods Folder",
+        "category": "MineCanon"
+      },
+      {
+        "command": "minecanon.revealFile",
+        "title": "Reveal File",
+        "category": "MineCanon"
+      },
+      {
+        "command": "minecanon.buildLauncher",
+        "title": "Build MineCanon Launcher",
+        "category": "MineCanon"
+      },
+      {
+        "command": "minecanon.buildUiMod",
+        "title": "Build minecanon-ui Mod",
+        "category": "MineCanon"
+      },
+      {
+        "command": "minecanon.installUiMod",
+        "title": "Install UI Mod into Launcher",
+        "category": "MineCanon"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "minecanon.ages",
+          "name": "MineCanon Ages"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "minecanon.selectAge",
+          "when": "view == minecanon.ages",
+          "group": "navigation"
+        },
+        {
+          "command": "minecanon.refresh",
+          "when": "view == minecanon.ages",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "minecanon.sortIntoAge",
+          "when": "view == minecanon.ages && viewItem == age",
+          "group": "inline"
+        },
+        {
+          "command": "minecanon.selectAge",
+          "when": "view == minecanon.ages && viewItem == age"
+        },
+        {
+          "command": "minecanon.openAgeFolder",
+          "when": "view == minecanon.ages && viewItem == age"
+        },
+        {
+          "command": "minecanon.scanLibrary",
+          "when": "view == minecanon.ages && viewItem == library"
+        },
+        {
+          "command": "minecanon.openLibraryFolder",
+          "when": "view == minecanon.ages && viewItem == library"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "MineCanon",
+      "properties": {
+        "minecanon.launcherHome": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Desktop launcher data folder. Default: `~/MineCanon`. Holds `launcher.properties` and `instances/<age>/`."
+        },
+        "minecanon.gameDir": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Minecraft game directory. Default: `%APPDATA%\\.minecraft` on Windows."
+        },
+        "minecanon.libraryDir": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Mod library folder. Default: the repository's `mods-1.20.1-base`, found by walking up from the workspace root."
+        },
+        "minecanon.jdk17": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "JDK 17 home used to build the minecanon-ui mod. Default: the VS Code Java extension pack's bundled JDK 17, then `JAVA_HOME`."
+        }
+      }
+    },
+    "snippets": [
+      {
+        "language": "java",
+        "path": "./snippets/java.json"
+      },
+      {
+        "language": "toml",
+        "path": "./snippets/toml.json"
+      },
+      {
+        "language": "json",
+        "path": "./snippets/json.json"
+      },
+      {
+        "language": "jsonc",
+        "path": "./snippets/json.json"
+      }
+    ]
+  }
+}

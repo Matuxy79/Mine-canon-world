@@ -47,6 +47,11 @@ Mine-canon-world/
 │     ├─ CanonScreen.java          In-game UI: age, lore, mod audit, auto-sort, age switch
 │     ├─ CanonState.java           Reads/writes the minecanon-state.json bridge
 │     └─ ModScanner.java           Same verdicts as the desktop scanner
+├─ minecanon-vscode/            VS Code extension (pure JS, zero dependencies)
+│  ├─ extension.js              Status bar age switcher, Ages tree, build commands
+│  ├─ lib/{zip,modscanner,canon}.js   JAR reader, ModScanner twin, launcher-state bridge
+│  ├─ snippets/{java,toml,json}.json  Forge 1.20.1 snippets
+│  └─ test/selftest.js          npm test — scanner parity vs the real library
 ├─ mods-1.20.1-base/          Collected mod JARs (Git LFS) and the pinned Forge 47.4.26 installer
 ├─ saves/                     World saves, including `minecraft world`
 └─ resourcepacks/             Resource packs
@@ -127,6 +132,26 @@ bypass Minecraft ownership. Back up worlds and close Minecraft before copying
 saves into an age's instance folder. Install only compatible Forge 1.20.1 mods
 there. Do not copy this entire mixed-loader collection into an active `mods`
 folder.
+## VS Code extension
+
+`minecanon-vscode/` is a zero-dependency VS Code extension that mirrors the
+launcher's tooling inside the editor (see `minecanon-vscode/README.md`):
+
+- Status bar shows the launcher's selected age; click to switch it — the same
+  `launcher.properties` selection the in-game UI (O key) reads and writes.
+- A **MineCanon Ages** tree in the Explorer lists each age's instance mods and
+  the mod library with the same COMPATIBLE / WRONG_LOADER / WRONG_VERSION /
+  UNKNOWN verdicts as the Java scanners.
+- **MineCanon** commands: auto-sort mods into an age (dry-run, confirm, copy),
+  scan library and game mods, reveal folders, run the launcher build, build the
+  in-game mod (Gradle staged in `%TEMP%`), and install the built mod jar into
+  the launcher app folder.
+- Forge 1.20.1 snippets for Java, mods.toml and lang JSON.
+
+Install with `code --install-extension minecanon-vscode-1.0.0.vsix`, or package
+it again with `npx @vscode/vsce package` inside `minecanon-vscode/`. Run
+`npm test` there for the headless self-test (33 checks).
+
 ## Contributing
 
 Back up the world and close Minecraft before editing or copying save files.

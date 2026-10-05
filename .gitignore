@@ -42,3 +42,6 @@ Desktop.ini
 /launcher/bin/
 /launcher/probe.tmp
 /MineCanon.lnk
+
+# VS Code extension packaging output
+*.vsix

@@ -1,0 +1,44 @@
+{
+  "Forge mods.toml skeleton": {
+    "prefix": "modstoml",
+    "description": "Complete META-INF/mods.toml for a Forge 1.20.1 mod (MC 1.20.1, Forge 47)",
+    "body": [
+      "modLoader=\"javafml\"",
+      "loaderVersion=\"[47,)\"",
+      "license=\"CC-BY-SA-4.0\"",
+      "",
+      "[[mods]]",
+      "modId=\"${1:modid}\"",
+      "version=\"${2:1.0.0}\"",
+      "displayName=\"${3:Display Name}\"",
+      "authors=\"${4:John Matukutire}\"",
+      "description='''${5:Description of the mod.}'''",
+      "",
+      "[[dependencies.${1:modid}]]",
+      "    modId=\"forge\"",
+      "    mandatory=true",
+      "    versionRange=\"[47,)\"",
+      "    ordering=\"NONE\"",
+      "    side=\"BOTH\"",
+      "",
+      "[[dependencies.${1:modid}]]",
+      "    modId=\"minecraft\"",
+      "    mandatory=true",
+      "    versionRange=\"[1.20.1,1.21)\"",
+      "    ordering=\"NONE\"",
+      "    side=\"BOTH\""
+    ]
+  },
+  "Forge dependency block": {
+    "prefix": "mcdep",
+    "description": "Add a [[dependencies.<mod>]] block to mods.toml",
+    "body": [
+      "[[dependencies.${1:modid}]]",
+      "    modId=\"${2:minecraft}\"",
+      "    mandatory=${3|true,false|}",
+      "    versionRange=\"${4:[1.20.1,1.21)}\"",
+      "    ordering=\"NONE\"",
+      "    side=\"${5|BOTH,CLIENT,SERVER|}\""
+    ]
+  }
+}

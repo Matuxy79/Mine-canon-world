@@ -1,0 +1,26 @@
+{
+  "Lang file entries (en_us.json)": {
+    "prefix": "mclang",
+    "description": "Keybind category + screen translation keys for assets/<modid>/lang/en_us.json",
+    "body": [
+      "{",
+      "  \"key.categories.${1:minecanon}\": \"Mine Canon\",",
+      "  \"key.${1:minecanon}.${2:open}\": \"Open Canon Screen\",",
+      "  \"screen.${1:minecanon}.${3:title}\": \"${4:Mine Canon}\"",
+      "}"
+    ]
+  },
+  "minecanon-state.json skeleton": {
+    "prefix": "mcstate",
+    "description": "The state bridge the launcher, VS Code extension and in-game UI share",
+    "body": [
+      "{",
+      "  \"schema\": 1,",
+      "  \"age\": \"${1|first-breath,nocturne-west,chakra-nations,nen-new-world,curse-modernity,dark-continent|}\",",
+      "  \"ageName\": \"${2:First Breath}\",",
+      "  \"lore\": \"${3:Breath, bending and the first disciplines of the Canon Field.}\",",
+      "  \"library\": \"${4:C:/path/to/mods-1.20.1-base}\"",
+      "}"
+    ]
+  }
+}
